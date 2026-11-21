@@ -5,6 +5,8 @@ A hands-on Security Operations Center (SOC) home lab built on **Wazuh SIEM/XDR**
 The lab runs three isolated VMs — an attacker (Kali), a monitored Windows 11 endpoint, and a Wazuh server — on a private network segment, so attacks, telemetry and investigations never touch the real host or home network.
 
 > **Status:** Phases 0–8 complete ✅ (foundation, attack simulation, custom detection engineering, MITRE mapping) · Next: **Phase 9 – Threat hunting**
+>
+> **Related project:** [SOC AI Analyst Home Lab](https://github.com/k-Darshan-chowdary/SOC-AI-Analyst-HomeLab) — the AI-assisted triage side of the same home lab (a TShark sensor feeding a Langflow + NVIDIA analyst).
 
 ---
 
@@ -103,6 +105,14 @@ troubleshooting.md  every error → cause → fix
 | T1110 / T1053.005 / T1046 | Brute Force / Scheduled Task / Network Service Discovery |
 
 > Windows Event ID = what happened · Wazuh Rule ID = how the SIEM interpreted it · MITRE technique = behavior category · Analyst = the final verdict.
+
+## Skills demonstrated
+
+VMware virtualization & network isolation · Wazuh SIEM/XDR deployment and administration · Sysmon telemetry engineering · Windows Security & Sysmon event analysis · controlled attack simulation (Kali, Nmap, SMB, PowerShell, persistence) · **detection engineering** (custom Wazuh correlation rules) · MITRE ATT&CK mapping · log and network-traffic analysis · methodical troubleshooting.
+
+## License
+
+Released under the [MIT License](LICENSE).
 
 ---
 
