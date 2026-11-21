@@ -30,11 +30,25 @@ Discovery (T1046)  →  Credential Access (T1110)  →  Execution (T1059.001)  �
 
 An attacker following the simulated path in Phase 6 now creates an alert at **every stage**.
 
-## 📝 To add
+## Evidence
 
-- [ ] ATT&CK Navigator layer (JSON/screenshot) showing covered techniques
-- [ ] Wazuh MITRE ATT&CK dashboard screenshot
-- [ ] Investigation notes per technique
+Each custom detection carries its MITRE mapping through to the Wazuh event, shown here in the dashboard's `rule.mitre` fields:
+
+**T1110 — Brute Force** (Credential Access):
+
+![T1110 Brute Force](../screenshots/phase-08/01-mitre-t1110-brute-force.png)
+
+**T1053.005 — Scheduled Task** (Execution / Persistence / Privilege Escalation):
+
+![T1053.005 Scheduled Task](../screenshots/phase-08/02-mitre-t1053-005-scheduled-task.png)
+
+**T1046 — Network Service Discovery** (Discovery):
+
+![T1046 Network Service Discovery](../screenshots/phase-08/03-mitre-t1046-network-service-discovery.png)
+
+## 📝 Still to add
+
+- [ ] A consolidated ATT&CK Navigator layer showing all covered techniques at once
 
 ## Outcome
 

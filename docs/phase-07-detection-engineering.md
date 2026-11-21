@@ -129,10 +129,23 @@ for i in {1..5}; do nmap -sT -Pn -p 445 10.10.10.20; sleep 2; done
 
 This did **not** trigger the port-scan alert, confirming the `different_field` logic.
 
-## 📝 Still to add
+## Evidence
 
-- [ ] Screenshots of each custom rule firing in Wazuh
-- [ ] Negative-control screenshot (same-port probes, no 100121)
+**The four custom rules, deployed and tuned** — `grep` on the manager showing the final rule IDs and parameters (note `100121` tuned to `frequency="3"`):
+
+![Final tuned rules on the manager](../screenshots/phase-07/03-final-tuned-rules.png)
+
+**Rule 100120 firing** — the Wazuh dashboard showing "Windows Filtering Platform blocked an inbound TCP connection" (rule 100120) alongside the audit-failure building blocks:
+
+![WFP blocked TCP, rule 100120](../screenshots/phase-07/02-wfp-blocked-tcp-rule-100120.png)
+
+**Negative control** — the same-port probe loop run from Kali, which correctly did **not** trigger the port-scan correlation rule 100121:
+
+![Negative control: same-port probes](../screenshots/phase-07/01-negative-control-same-port.png)
+
+**Rules exported for the portfolio** — pulling `phase7_rules.xml` off the manager into the evidence folder:
+
+![Rules pulled to evidence](../screenshots/phase-07/04-rules-pulled-to-evidence.png)
 
 ## Outcome
 

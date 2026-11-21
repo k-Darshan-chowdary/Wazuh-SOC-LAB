@@ -56,10 +56,13 @@ $SysmonEvents = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmo
   Select-Object TimeCreated,Id,ProviderName | Format-Table -AutoSize
 ```
 
+## Evidence
+
+No dashboard screenshots were captured during Phase 5 itself (the commands above are from the recovered endpoint history). The same monitoring and triage workflow is shown in the dashboard captures for [Phase 6](phase-06-controlled-attack-simulations.md), [Phase 7](phase-07-detection-engineering.md) and [Phase 8](phase-08-mitre-attack-mapping.md).
+
 ## 📝 Still to add
 
-- [ ] Screenshots of the investigations above in the Wazuh dashboard
-- [ ] Triage verdicts recorded for each investigated alert
+- [ ] Triage verdicts recorded for each investigated alert (if re-run)
 
 ## Outcome
 

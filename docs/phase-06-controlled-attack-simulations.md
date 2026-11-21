@@ -88,9 +88,17 @@ schtasks /Delete /TN "SOC-LAB-PERSIST-TEST" /F
 Remove-Item "C:\Users\Public\soc-test.txt","C:\Users\Public\soc-persist.txt" -Force -ErrorAction SilentlyContinue
 ```
 
+## Evidence
+
+**Controlled attack telemetry surfacing in Wazuh** — the dashboard showing the simulated activity being recorded: discovery activity, a suspicious binary launched by PowerShell (rule 92066), "PowerShell was used to delete files" (92021), and SCA checks on WIN-ENDPOINT-01:
+
+![Controlled attack telemetry in Wazuh](../screenshots/phase-06/01-controlled-attack-telemetry.png)
+
+> The default ruleset surfaced the PowerShell and discovery activity, but the gaps noted above (repeated-auth correlation, 5157 ingestion, scheduled-task persistence) are what [Phase 7](phase-07-detection-engineering.md) closed.
+
 ## 📝 Still to add
 
-- [ ] Screenshots of the alerts that fired (failed auth, nested and encoded PowerShell)
+- [ ] Close-up of a specific nested / Base64 PowerShell alert
 - [ ] Screenshot of a detection gap (e.g. Threat Hunting with no result for the port scan)
 
 ## Outcome
