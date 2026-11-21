@@ -3,7 +3,7 @@
 **Completed:** 2026-09-22
 **Goal:** close the three detection gaps from [Phase 6](phase-06-controlled-attack-simulations.md) with custom Wazuh rules, then validate, test and tune them.
 
-> **Sources:** my custom rules file [`configs/wazuh/local_rules-phase7.xml`](../configs/wazuh/local_rules-phase7.xml) (copied from the lab's evidence folder) and the milestone snapshot notes from both VMs.
+> **Sources:** my custom rules file [`configs/wazuh/local_rules-phase7.xml`](../configs/wazuh/local_rules-phase7.xml) plus the actual command history recovered from WAZUH-SERVER and WIN-ENDPOINT-01. Only screenshots are still missing (marked 📝).
 
 ## Custom rules
 
@@ -51,9 +51,58 @@
 </rule>
 ```
 
-## Endpoint change
+## Endpoint change: ingest Event 5157
 
-WIN-ENDPOINT-01 was configured to **collect Event ID 5157** (Windows Filtering Platform blocked connection). That closes the Phase 6 ingestion gap that left port scans invisible.
+The port-scan rule can't fire if the endpoint never records blocked connections. Two things were needed on WIN-ENDPOINT-01:
+
+```powershell
+# 1. Turn on Filtering Platform Connection auditing (failures)
+auditpol /set /subcategory:"Filtering Platform Connection" /failure:enable
+auditpol /get  /subcategory:"Filtering Platform Connection"
+
+# 2. The Wazuh agent's ossec.conf had been filtering 5157 out ("and EventID != 5157").
+#    Remove that exclusion, validate the XML, and restart the agent.
+Restart-Service WazuhSvc
+```
+
+Then a scan from Kali was confirmed to reach the manager, filtering on the attacker IP:
+
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=5157; StartTime=(Get-Date).AddMinutes(-10)} |
+  Where-Object { $_.Message -match '10\.10\.10\.30' } | Select-Object -First 10 TimeCreated,Id,Message | Format-List
+```
+
+## How the rules were built and validated (WAZUH-SERVER)
+
+The rules live in a dedicated file so the stock ruleset stays untouched, and **every change was validated before restarting the manager**:
+
+```bash
+# Create the rules file (one <group> per detection, appended as each was added)
+sudo tee /var/ossec/etc/rules/phase7_rules.xml > /dev/null <<'EOF'
+... rule XML ...
+EOF
+
+# Validate syntax BEFORE restarting — this is the key habit
+sudo /var/ossec/bin/wazuh-analysisd -t
+sudo systemctl restart wazuh-manager
+sudo systemctl is-active wazuh-manager
+```
+
+A timestamped backup was taken before each edit (`phase7_rules.xml.after-7.1`, `.before-7.2-fix`, `.before-destfield-fix`, …), so every tuning step was reversible.
+
+## Tuning journey (the real debugging)
+
+The rules didn't work first try. `wazuh-analysisd -t` and live testing drove these fixes:
+
+| Issue found | Fix |
+|---|---|
+| 100110 first matched on `win.system.eventID = 1`, which was unreliable | Switched to `<if_group>sysmon_event1</if_group>` |
+| 100120 used `<options>no_log</options>` at level 1 and never surfaced | Raised to level 5 and removed `no_log` |
+| 100120 wasn't anchored to a parent rule | Added `<if_sid>60104</if_sid>` (Windows event decoder) |
+| 100121 used `destinationAddress` / `destinationPort` — wrong field names | Renamed to `destAddress` / `destPort` (what Wazuh actually decodes) |
+| Port-scan rule too sensitive at `frequency="4"` | Tuned to `frequency="3"` |
+
+> This is the real value of the phase: the final rules file looks clean, but getting there meant reading `wazuh-analysisd` errors, checking which field names Wazuh decodes, and tuning thresholds against live tests.
 
 ## Testing
 
@@ -70,12 +119,20 @@ WIN-ENDPOINT-01 was configured to **collect Event ID 5157** (Windows Filtering P
 | Scheduled-task persistence missed | 100110 |
 | (Port scanning now detectable) | 100121 |
 
-## 📝 To add
+### Negative control
+
+Repeated probes to the **same** port were run from Kali to prove 100121 only fires on *different* ports:
+
+```bash
+for i in {1..5}; do nmap -sT -Pn -p 445 10.10.10.20; sleep 2; done
+```
+
+This did **not** trigger the port-scan alert, confirming the `different_field` logic.
+
+## 📝 Still to add
 
 - [ ] Screenshots of each custom rule firing in Wazuh
 - [ ] Negative-control screenshot (same-port probes, no 100121)
-- [ ] Tuning changes made (what was adjusted and why)
-- [ ] How 5157 auditing was enabled on the endpoint
 
 ## Outcome
 

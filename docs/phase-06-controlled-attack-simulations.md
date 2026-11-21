@@ -3,7 +3,7 @@
 **Completed:** 2026-09-06
 **Goal:** run controlled attacker activity from Kali against the Windows lab endpoint (never the host), then measure what Wazuh detects out of the box and what it misses.
 
-> **Source of this write-up:** the milestone snapshot notes I recorded on both VMs at the end of the phase. Exact commands and screenshots weren't saved locally, so the sections marked 📝 are open for me to fill in.
+> **Source of this write-up:** the milestone snapshot notes plus the actual command history recovered from the Kali and Windows VMs. Only screenshots are still missing (marked 📝).
 
 ## Safety boundary
 
@@ -22,6 +22,8 @@ All activity was Kali (10.10.10.30) → WIN-ENDPOINT-01 (10.10.10.20) on the iso
 
 Sysmon and Windows Security telemetry was verified for the simulations.
 
+**Attacker side (Kali VM, 10.10.10.30):** controlled **Nmap** reconnaissance, **SMB authentication** attempts, and a temporary **HTTP test server** that served the file for the PowerShell download test. All were aimed at WIN-ENDPOINT-01 only. Temporary test files and services were cleaned up afterwards (snapshot `Phase-6-Attacker-Ready`).
+
 ## Results: detected vs. gaps
 
 **Detected by default Wazuh rules ✅**
@@ -39,12 +41,57 @@ Sysmon and Windows Security telemetry was verified for the simulations.
 
 > Measuring gaps was the point of this phase. Each one became a custom detection in [Phase 7](phase-07-detection-engineering.md).
 
-## 📝 To add
+## Commands used
 
-- [ ] Kali commands/tools used for each simulation
+### Attacker (Kali, 10.10.10.30)
+
+```bash
+# Reconnaissance (connect and SYN scans)
+nmap -sT -Pn -p 135,139,445,3389 10.10.10.20
+sudo nmap -sS -Pn -T5 --max-retries 0 -p 135,139,445,3389,5985,5986 10.10.10.20
+
+# SMB authentication attempts (fake account → failed logons)
+smbclient -L //10.10.10.20 -U SOC-FAKE
+
+# HTTP test server (serves the file for the PowerShell download test)
+mkdir -p ~/soc-share && echo "SOC LAB SAFE TEST FILE" > ~/soc-share/soc-test.txt
+cd ~/soc-share && python3 -m http.server 8000 --bind 10.10.10.30
+```
+
+### Endpoint (WIN-ENDPOINT-01)
+
+```powershell
+# Temporary SMB exposure so failed logons from Kali reach the endpoint
+New-NetFirewallRule -DisplayName "SOC-LAB TEMP SMB from Kali" -Direction Inbound `
+  -Protocol TCP -LocalPort 445 -RemoteAddress 10.10.10.30 -Action Allow
+
+# PowerShell download from the Kali HTTP server
+powershell.exe -NoProfile -Command "Invoke-WebRequest -Uri 'http://10.10.10.30:8000/soc-test.txt' -OutFile 'C:\Users\Public\soc-test.txt'"
+
+# Base64-encoded PowerShell
+$cmd = 'Write-Output "SOC ENCODED TEST"'
+$encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($cmd))
+powershell.exe -NoProfile -EncodedCommand $encoded
+
+# Scheduled-task persistence
+schtasks /Create /TN "SOC-LAB-PERSIST-TEST" `
+  /TR "cmd.exe /c echo SOC-PERSIST-TEST > C:\Users\Public\soc-persist.txt" /SC ONLOGON /F
+```
+
+Each step was verified with a matching Sysmon Event 1 / Security query (e.g. filtering on `soc-test.txt`, `EncodedCommand`, or `schtasks.exe`).
+
+### Cleanup (run afterwards)
+
+```powershell
+Remove-NetFirewallRule -DisplayName "SOC-LAB TEMP SMB from Kali"
+schtasks /Delete /TN "SOC-LAB-PERSIST-TEST" /F
+Remove-Item "C:\Users\Public\soc-test.txt","C:\Users\Public\soc-persist.txt" -Force -ErrorAction SilentlyContinue
+```
+
+## 📝 Still to add
+
 - [ ] Screenshots of the alerts that fired (failed auth, nested and encoded PowerShell)
-- [ ] Evidence for each gap (e.g. Threat Hunting with no result)
-- [ ] Cleanup checklist that was run afterwards
+- [ ] Screenshot of a detection gap (e.g. Threat Hunting with no result for the port scan)
 
 ## Outcome
 

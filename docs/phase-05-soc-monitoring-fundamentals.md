@@ -3,7 +3,7 @@
 **Completed:** 2026-09-04
 **Goal:** practice the Tier 1 analyst loop on real lab telemetry (triage, process investigation, timelines, hashes, parent-child reasoning) before any attack simulation.
 
-> **Source of this write-up:** the milestone snapshot notes I recorded on both VMs at the end of the phase. Commands and screenshots from this phase weren't saved locally, so the sections marked 📝 are open for me to fill in from my own notes.
+> **Source of this write-up:** the milestone snapshot notes plus the actual command history recovered from WIN-ENDPOINT-01. Only screenshots are still missing (marked 📝).
 
 ## What was done
 
@@ -26,12 +26,40 @@ Alert surfaces  →  read rule.id / rule.level / description
 
 Key reasoning carried over from Phase 4: a process name alone is weak evidence. The **parent-child chain, the command line and the hash** decide whether activity is normal.
 
-## 📝 To add
+## Commands used (WIN-ENDPOINT-01)
 
-- [ ] Example failed-logon event (Event ID 4625) and the Wazuh rule it matched
-- [ ] One process investigation (PowerShell parent → child, hash lookup result)
-- [ ] Correlated timeline screenshot
-- [ ] Triage verdicts for each investigated alert
+**Failed-logon investigation (Event ID 4625)**
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625; StartTime=(Get-Date).AddMinutes(-10)} |
+  Select-Object -First 3 | Format-List TimeCreated,Id,Message
+```
+
+**Process investigation (Sysmon Event 1, PowerShell)**
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; Id=1; StartTime=(Get-Date).AddMinutes(-10)} |
+  Where-Object { $_.Message -match 'powershell.exe' } |
+  Select-Object -First 3 | Format-List TimeCreated,Id,Message
+```
+
+**Hash analysis** — take the SHA256 from a process event and confirm it against the on-disk binary:
+```powershell
+Get-FileHash "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -Algorithm SHA256
+```
+
+**Timeline correlation** — merge Security and Sysmon events into one time-ordered view:
+```powershell
+$Start = (Get-Date).AddHours(-2)
+$SecurityEvents = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625,4720,4726; StartTime=$Start}
+$SysmonEvents = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; Id=1; StartTime=$Start} |
+  Where-Object { $_.Message -match 'powershell.exe' }
+($SecurityEvents + $SysmonEvents) | Sort-Object TimeCreated |
+  Select-Object TimeCreated,Id,ProviderName | Format-Table -AutoSize
+```
+
+## 📝 Still to add
+
+- [ ] Screenshots of the investigations above in the Wazuh dashboard
+- [ ] Triage verdicts recorded for each investigated alert
 
 ## Outcome
 
