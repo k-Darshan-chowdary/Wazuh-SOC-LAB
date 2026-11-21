@@ -1,0 +1,10 @@
+# /etc/netplan/60-soc-lab.yaml on WAZUH-SERVER
+# Private SOC-LAB adapter: static, no gateway, no DNS (default route stays on NAT/ens33)
+# Apply: sudo chmod 600 /etc/netplan/60-soc-lab.yaml && sudo netplan generate && sudo netplan apply
+network:
+  version: 2
+  ethernets:
+    ens37:
+      dhcp4: false
+      addresses: [10.10.10.10/24]
+      optional: true

@@ -1,0 +1,12 @@
+# never commit secrets, raw dumps or VM files
+*.key
+*.pem
+*.env
+*password*
+*credentials*
+archives.json
+*.vmdk
+*.vmx
+*.iso
+Thumbs.db
+desktop.ini

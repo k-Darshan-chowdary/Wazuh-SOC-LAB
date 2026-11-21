@@ -1,0 +1,8 @@
+<!-- Phase 4 active config: Process Create (Event ID 1) only, with SHA256. -->
+<!-- Apply: sysmon -c C:\Sysmon\sysmonconfig.xml -->
+<Sysmon schemaversion="4.90">
+  <HashAlgorithms>SHA256</HashAlgorithms>
+  <EventFiltering>
+    <ProcessCreate onmatch="exclude" />
+  </EventFiltering>
+</Sysmon>
